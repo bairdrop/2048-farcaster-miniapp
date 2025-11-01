@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { RotateCcw, Trophy, Clock, Gamepad2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { sdk } from '@farcaster/frame-sdk';
 
 interface LeaderboardEntry {
   username: string;
+  fid?: number;
   score: number;
   timestamp: number;
 }
@@ -31,17 +33,32 @@ const Game2048 = () => {
   const [won, setWon] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [username, setUsername] = useState('');
+  const [farcasterUser, setFarcasterUser] = useState<{ fid: number; username: string } | null>(null);
   const SIZE = 4;
 
   useEffect(() => {
     setMounted(true);
     const loadData = async () => {
+      // Load best score from localStorage
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('2048-best');
         if (saved) setBestScore(parseInt(saved));
       }
 
+      // Get Farcaster user info
+      try {
+        const context = await sdk.context;
+        if (context?.user) {
+          setFarcasterUser({
+            fid: context.user.fid,
+            username: context.user.username || `fid:${context.user.fid}`
+          });
+        }
+      } catch (error) {
+        console.log('Could not get Farcaster user info:', error);
+      }
+
+      // Load leaderboard
       try {
         const leaderboardResult = await window.storage?.get('leaderboard', true);
         if (leaderboardResult) {
@@ -294,26 +311,47 @@ const Game2048 = () => {
   }, [handleKeyPress, mounted]);
 
   const handleShareScore = async () => {
-    if (!username.trim()) {
-      alert('Please enter a username first!');
+    if (!farcasterUser) {
+      alert('Please connect your Farcaster account first!');
       return;
     }
 
     const newEntry: LeaderboardEntry = {
-      username: username.trim(),
+      username: farcasterUser.username,
+      fid: farcasterUser.fid,
       score,
       timestamp: Date.now()
     };
 
-    const updatedLeaderboard = [...leaderboard, newEntry]
+    // Check if user already has a score in leaderboard
+    const existingIndex = leaderboard.findIndex(entry => entry.fid === farcasterUser.fid);
+    let updatedLeaderboard;
+
+    if (existingIndex !== -1) {
+      // Update existing score if new score is higher
+      if (score > leaderboard[existingIndex].score) {
+        updatedLeaderboard = [...leaderboard];
+        updatedLeaderboard[existingIndex] = newEntry;
+      } else {
+        updatedLeaderboard = [...leaderboard];
+      }
+    } else {
+      // Add new entry
+      updatedLeaderboard = [...leaderboard, newEntry];
+    }
+
+    // Sort and keep top 10
+    updatedLeaderboard = updatedLeaderboard
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
 
     try {
       await window.storage?.set('leaderboard', JSON.stringify(updatedLeaderboard), true);
       setLeaderboard(updatedLeaderboard);
+      alert('Score saved to leaderboard!');
     } catch (error) {
       console.error('Failed to save to leaderboard:', error);
+      alert('Failed to save score. Please try again.');
     }
 
     const appUrl = window.location.origin;
@@ -363,6 +401,13 @@ const Game2048 = () => {
                 className="w-[100px] h-[100px] rounded-2xl shadow-lg"
               />
             </div>
+
+            {farcasterUser && (
+              <div className="mb-6 text-center">
+                <p className="text-sm text-gray-600">Playing as</p>
+                <p className="text-lg font-bold text-indigo-600">@{farcasterUser.username}</p>
+              </div>
+            )}
 
             <div className="space-y-4 mb-8">
               <button
@@ -422,13 +467,15 @@ const Game2048 = () => {
                 leaderboard.map((entry, index) => (
                   <div
                     key={index}
-                    className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 flex items-center justify-between border-2 border-indigo-100"
+                    className={`bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 flex items-center justify-between border-2 ${
+                      entry.fid === farcasterUser?.fid ? 'border-indigo-500 bg-indigo-100' : 'border-indigo-100'
+                    }`}
                   >
                     <div className="flex items-center gap-4">
                       <span className="text-3xl font-bold text-indigo-600 w-10">
                         {index + 1}
                       </span>
-                      <span className="font-bold text-gray-800 text-lg">{entry.username}</span>
+                      <span className="font-bold text-gray-800 text-lg">@{entry.username}</span>
                     </div>
                     <span className="text-2xl font-bold text-indigo-600">{entry.score}</span>
                   </div>
@@ -515,14 +562,12 @@ const Game2048 = () => {
                     Score: {score}
                   </div>
                   
-                  <input
-                    type="text"
-                    placeholder="Enter your name"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="px-4 py-2 rounded-lg border-2 border-indigo-400 text-center mb-4 w-full max-w-xs text-gray-800"
-                    maxLength={20}
-                  />
+                  {farcasterUser && (
+                    <div className="mb-4 text-white">
+                      <p className="text-sm">Playing as</p>
+                      <p className="text-lg font-bold">@{farcasterUser.username}</p>
+                    </div>
+                  )}
                   
                   <div className="flex gap-3 justify-center">
                     <button
@@ -535,7 +580,7 @@ const Game2048 = () => {
                       onClick={handleShareScore}
                       className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
                     >
-                      Share Score
+                      Save & Share
                     </button>
                   </div>
                 </div>
