@@ -1,11 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { RotateCcw, Trophy, Clock, Gamepad2 } from 'lucide-react';
 
 interface LeaderboardEntry {
   username: string;
   score: number;
   timestamp: number;
+}
+
+declare global {
+  interface Window {
+    storage?: {
+      get: (key: string, shared?: boolean) => Promise<{ key: string; value: string; shared: boolean } | null>;
+      set: (key: string, value: string, shared?: boolean) => Promise<{ key: string; value: string; shared: boolean } | null>;
+      delete: (key: string, shared?: boolean) => Promise<{ key: string; deleted: boolean; shared: boolean } | null>;
+      list: (prefix?: string, shared?: boolean) => Promise<{ keys: string[]; prefix?: string; shared: boolean } | null>;
+    };
+  }
 }
 
 const Game2048 = () => {
@@ -29,6 +41,16 @@ const Game2048 = () => {
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('2048-best');
         if (saved) setBestScore(parseInt(saved));
+      }
+
+      try {
+        const leaderboardResult = await window.storage?.get('leaderboard', true);
+        if (leaderboardResult) {
+          const data = JSON.parse(leaderboardResult.value);
+          setLeaderboard(data.sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score).slice(0, 10));
+        }
+      } catch (error) {
+        console.log('No leaderboard data yet');
       }
     };
     
@@ -299,26 +321,58 @@ const Game2048 = () => {
     setTouchStart(null);
   };
 
-  const getTileColor = (value: number) => {
-    const colors: {[key: number]: string} = {
-      0: '#cdc1b4',
-      2: '#eee4da',
-      4: '#ede0c8',
-      8: '#f2b179',
-      16: '#f59563',
-      32: '#f67c5f',
-      64: '#f65e3b',
-      128: '#edcf72',
-      256: '#edcc61',
-      512: '#edc850',
-      1024: '#edc53f',
-      2048: '#edc22e',
+  const handleShareScore = async () => {
+    if (!username.trim()) {
+      alert('Please enter a username first!');
+      return;
+    }
+
+    const newEntry: LeaderboardEntry = {
+      username: username.trim(),
+      score,
+      timestamp: Date.now()
     };
-    return colors[value] || '#3c3a32';
+
+    const updatedLeaderboard = [...leaderboard, newEntry]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+
+    try {
+      await window.storage?.set('leaderboard', JSON.stringify(updatedLeaderboard), true);
+      setLeaderboard(updatedLeaderboard);
+    } catch (error) {
+      console.error('Failed to save to leaderboard:', error);
+    }
+
+    const appUrl = window.location.origin;
+    const text = `🎮 I scored ${score} in 2048 Farcaster! Can you beat it?\n\n${appUrl}`;
+    const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
+    window.open(shareUrl, '_blank');
   };
 
-  const getTileTextColor = (value: number) => {
-    return value <= 4 ? '#776e65' : '#f9f6f2';
+  const getTileColor = (value: number) => {
+    const colors: {[key: number]: string} = {
+      0: 'bg-gray-300',
+      2: 'bg-blue-100 text-gray-800',
+      4: 'bg-blue-200 text-gray-800',
+      8: 'bg-orange-300 text-white',
+      16: 'bg-orange-400 text-white',
+      32: 'bg-orange-500 text-white',
+      64: 'bg-red-400 text-white',
+      128: 'bg-yellow-300 text-white',
+      256: 'bg-yellow-400 text-white',
+      512: 'bg-yellow-500 text-white',
+      1024: 'bg-purple-400 text-white',
+      2048: 'bg-purple-600 text-white',
+      4096: 'bg-pink-500 text-white'
+    };
+    return colors[value] || 'bg-gray-900 text-white';
+  };
+
+  const getTileSize = (value: number) => {
+    if (value >= 1024) return 'text-2xl';
+    if (value >= 128) return 'text-3xl';
+    return 'text-4xl';
   };
 
   if (!mounted) {
@@ -327,84 +381,51 @@ const Game2048 = () => {
 
   if (currentScreen === 'home') {
     return (
-      <div style={{ width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
-          <div style={{ width: '100px', height: '100px', background: '#edc22e', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 'bold', color: 'white' }}>
-            2048
-          </div>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl p-6">
+            <div className="flex justify-center items-center mb-8 pt-8">
+              <img 
+                src="https://2048-farcaster-miniapp-seven.vercel.app/icon.png" 
+                alt="2048 Game Icon" 
+                className="w-[100px] h-[100px] rounded-2xl shadow-lg"
+              />
+            </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
-          <button
-            onClick={() => startGame('timed')}
-            style={{
-              width: '100%',
-              background: 'linear-gradient(to right, #f97316, #ef4444)',
-              color: 'white',
-              fontWeight: 'bold',
-              padding: '1rem 1.5rem',
-              borderRadius: '0.5rem',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem'
-            }}
-          >
-            ⏱️ Play Against Time (30s)
-          </button>
-          
-          <button
-            onClick={() => startGame('normal')}
-            style={{
-              width: '100%',
-              background: 'linear-gradient(to right, #6366f1, #a855f7)',
-              color: 'white',
-              fontWeight: 'bold',
-              padding: '1rem 1.5rem',
-              borderRadius: '0.5rem',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem'
-            }}
-          >
-            🎮 Play Normal Game
-          </button>
-          
-          <button
-            onClick={() => setCurrentScreen('leaderboard')}
-            style={{
-              width: '100%',
-              background: 'linear-gradient(to right, #10b981, #14b8a6)',
-              color: 'white',
-              fontWeight: 'bold',
-              padding: '1rem 1.5rem',
-              borderRadius: '0.5rem',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem'
-            }}
-          >
-            🏆 Leaderboard
-          </button>
-        </div>
+            <div className="space-y-4 mb-8">
+              <button
+                onClick={() => startGame('timed')}
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
+              >
+                <Clock size={24} />
+                Play Against Time (30s)
+              </button>
+              
+              <button
+                onClick={() => startGame('normal')}
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
+              >
+                <Gamepad2 size={24} />
+                Play Normal Game
+              </button>
+              
+              <button
+                onClick={() => setCurrentScreen('leaderboard')}
+                className="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
+              >
+                <Trophy size={24} />
+                Leaderboard
+              </button>
+            </div>
 
-        <div style={{ textAlign: 'center', color: '#6b7280' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4f46e5', marginBottom: '1rem' }}>How to Play</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem' }}>
-            <p>Use arrow keys on desktop or swipe on mobile to move tiles.</p>
-            <p>When two tiles with the same number touch, they merge into one!</p>
-            <p style={{ fontWeight: '600' }}>Goal: Reach the 2048 tile to win!</p>
+            <div className="text-center pb-4">
+              <h2 className="text-2xl font-bold text-indigo-600 mb-4">How to Play</h2>
+              <div className="text-gray-600 space-y-2">
+                <p className="text-sm">Use arrow keys on desktop or swipe on mobile to move tiles.</p>
+                <p className="text-sm">When two tiles with the same number touch, they merge into one!</p>
+                <p className="text-sm font-semibold">Goal: Reach the 2048 tile to win!</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -413,230 +434,152 @@ const Game2048 = () => {
 
   if (currentScreen === 'leaderboard') {
     return (
-      <div style={{ width: '100%' }}>
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h1 style={{ fontSize: '2.25rem', fontWeight: 'bold', color: '#4f46e5', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            🏆 Leaderboard
-          </h1>
-        </div>
-        
-        <div style={{ minHeight: '400px', marginBottom: '1.5rem' }}>
-          {leaderboard.length === 0 ? (
-            <p style={{ color: '#6b7280', textAlign: 'center', padding: '2rem' }}>No scores yet. Be the first!</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {leaderboard.map((entry, index) => (
-                <div
-                  key={index}
-                  style={{
-                    background: 'linear-gradient(to right, #eef2ff, #f5f3ff)',
-                    borderRadius: '0.5rem',
-                    padding: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    border: '2px solid #e0e7ff'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#4f46e5', width: '2.5rem' }}>
-                      {index + 1}
-                    </span>
-                    <span style={{ fontWeight: 'bold', color: '#1f2937', fontSize: '1.125rem' }}>{entry.username}</span>
-                  </div>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4f46e5' }}>{entry.score}</span>
-                </div>
-              ))}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl p-6">
+            <div className="mb-6">
+              <h1 className="text-4xl font-bold text-indigo-600 flex items-center justify-center gap-2">
+                <Trophy size={36} /> Leaderboard
+              </h1>
             </div>
-          )}
-        </div>
+            
+            <div className="space-y-3 mb-6" style={{ minHeight: '400px' }}>
+              {leaderboard.length === 0 ? (
+                <p className="text-gray-600 text-center py-8">No scores yet. Be the first!</p>
+              ) : (
+                leaderboard.map((entry, index) => (
+                  <div
+                    key={index}
+                    className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 flex items-center justify-between border-2 border-indigo-100"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl font-bold text-indigo-600 w-10">
+                        {index + 1}
+                      </span>
+                      <span className="font-bold text-gray-800 text-lg">{entry.username}</span>
+                    </div>
+                    <span className="text-2xl font-bold text-indigo-600">{entry.score}</span>
+                  </div>
+                ))
+              )}
+            </div>
 
-        <button
-          onClick={() => setCurrentScreen('home')}
-          style={{
-            width: '100%',
-            background: '#374151',
-            color: 'white',
-            borderRadius: '0.5rem',
-            padding: '0.75rem',
-            fontWeight: 'bold',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '1rem'
-          }}
-        >
-          Back
-        </button>
+            <button
+              onClick={() => setCurrentScreen('home')}
+              className="w-full bg-gray-700 hover:bg-gray-800 text-white rounded-lg py-3 font-bold transition-colors"
+            >
+              Back
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ width: '100%' }}>
-      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
-          <div style={{ width: '64px', height: '64px', background: '#edc22e', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold', color: 'white' }}>
-            2048
-          </div>
-        </div>
-        <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Join tiles to reach 2048!</p>
-      </div>
-
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '80px', background: 'linear-gradient(to right, #6366f1, #a855f7)', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: '600' }}>SCORE</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{score}</div>
-        </div>
-        <div style={{ flex: 1, minWidth: '80px', background: 'linear-gradient(to right, #f97316, #ef4444)', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: '600' }}>🏆 BEST</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{bestScore}</div>
-        </div>
-        {gameMode === 'timed' && (
-          <div style={{ flex: 1, minWidth: '80px', background: 'linear-gradient(to right, #ef4444, #ec4899)', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: '600' }}>⏱️ TIME</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{timeLeft}s</div>
-          </div>
-        )}
-        <button
-          onClick={initGame}
-          style={{
-            background: '#374151',
-            color: 'white',
-            borderRadius: '0.5rem',
-            padding: '0 1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '1.5rem'
-          }}
-          title="New Game"
-        >
-          🔄
-        </button>
-      </div>
-
-      <div 
-        style={{ 
-          background: '#bbada0', 
-          borderRadius: '0.75rem', 
-          padding: '0.75rem', 
-          marginBottom: '1.5rem',
-          position: 'relative'
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-          {grid.map((row, i) =>
-            row.map((cell, j) => (
-              <div
-                key={`${i}-${j}`}
-                style={{
-                  aspectRatio: '1',
-                  borderRadius: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 'bold',
-                  fontSize: cell >= 1024 ? '1.5rem' : cell >= 128 ? '1.875rem' : '2.25rem',
-                  background: getTileColor(cell),
-                  color: getTileTextColor(cell),
-                  transition: 'all 0.1s'
-                }}
-              >
-                {cell !== 0 && cell}
-              </div>
-            ))
-          )}
-        </div>
-
-        {(gameOver || won) && (
-          <div style={{ 
-            position: 'absolute', 
-            inset: 0, 
-            background: 'rgba(0, 0, 0, 0.8)', 
-            borderRadius: '0.75rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center' 
-          }}>
-            <div style={{ textAlign: 'center', padding: '1rem' }}>
-              <div style={{ fontSize: '2.25rem', fontWeight: 'bold', color: 'white', marginBottom: '1rem' }}>
-                {won && !gameOver ? '🎉 You Won!' : gameOver ? '💀 Game Over' : '🎉 You Won!'}
-              </div>
-              <div style={{ fontSize: '1.5rem', color: 'white', marginBottom: '1rem' }}>
-                Score: {score}
-              </div>
-              
-              <input
-                type="text"
-                placeholder="Enter your name"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  border: '2px solid #6366f1',
-                  textAlign: 'center',
-                  marginBottom: '1rem',
-                  width: '100%',
-                  maxWidth: '20rem',
-                  fontSize: '1rem'
-                }}
-                maxLength={20}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-2xl p-6">
+          <div className="text-center mb-6">
+            <div className="flex justify-center mb-2">
+              <img 
+                src="https://2048-farcaster-miniapp-seven.vercel.app/icon.png" 
+                alt="2048 Game" 
+                className="w-16 h-16 rounded-lg"
               />
-              
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button
-                  onClick={initGame}
-                  style={{
-                    background: '#6366f1',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '0.5rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '1rem'
-                  }}
-                >
-                  Play Again
-                </button>
-                <button
-                  onClick={() => {
-                    if (!username.trim()) {
-                      alert('Please enter a username first!');
-                      return;
-                    }
-                    const appUrl = window.location.origin;
-                    const text = `🎮 I scored ${score} in 2048 Farcaster! Can you beat it?\n\n${appUrl}`;
-                    const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
-                    window.open(shareUrl, '_blank');
-                  }}
-                  style={{
-                    background: 'linear-gradient(to right, #10b981, #14b8a6)',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '0.5rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '1rem'
-                  }}
-                >
-                  Share Score
-                </button>
-              </div>
             </div>
+            <p className="text-gray-600 text-sm">Join tiles to reach 2048!</p>
           </div>
-        )}
-      </div>
 
-      <div style={{ textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
-        <p style={{ marginBottom: '0.25rem' }}>Use arrow keys or swipe to play</p>
-        <p style={{ fontSize: '0.75rem' }}>Merge tiles with same numbers to reach 2048!</p>
+          <div className="flex gap-3 mb-6">
+            <div className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg p-3 text-white">
+              <div className="text-xs font-semibold uppercase">Score</div>
+              <div className="text-2xl font-bold">{score}</div>
+            </div>
+            <div className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg p-3 text-white">
+              <div className="text-xs font-semibold uppercase flex items-center gap-1">
+                <Trophy size={12} /> Best
+              </div>
+              <div className="text-2xl font-bold">{bestScore}</div>
+            </div>
+            {gameMode === 'timed' && (
+              <div className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg p-3 text-white">
+                <div className="text-xs font-semibold uppercase flex items-center gap-1">
+                  <Clock size={12} /> Time
+                </div>
+                <div className="text-2xl font-bold">{timeLeft}s</div>
+              </div>
+            )}
+            <button
+              onClick={initGame}
+              className="bg-gray-700 hover:bg-gray-800 text-white rounded-lg px-4 flex items-center justify-center transition-colors"
+              title="New Game"
+            >
+              <RotateCcw size={24} />
+            </button>
+          </div>
+
+          <div 
+            className="bg-gray-800 rounded-xl p-3 mb-6 relative"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="grid grid-cols-4 gap-3">
+              {grid.map((row, i) =>
+                row.map((cell, j) => (
+                  <div
+                    key={`${i}-${j}`}
+                    className={`aspect-square rounded-lg flex items-center justify-center font-bold transition-all duration-100 ${getTileColor(cell)} ${getTileSize(cell)}`}
+                  >
+                    {cell !== 0 && cell}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {(gameOver || won) && (
+              <div className="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-center justify-center">
+                <div className="text-center px-4">
+                  <div className="text-4xl font-bold text-white mb-4">
+                    {won && !gameOver ? '🎉 You Won!' : gameOver ? '💀 Game Over' : '🎉 You Won!'}
+                  </div>
+                  <div className="text-2xl text-white mb-4">
+                    Score: {score}
+                  </div>
+                  
+                  <input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="px-4 py-2 rounded-lg border-2 border-indigo-400 text-center mb-4 w-full max-w-xs text-gray-800"
+                    maxLength={20}
+                  />
+                  
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={initGame}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                      Play Again
+                    </button>
+                    <button
+                      onClick={handleShareScore}
+                      className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                      Share Score
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="text-center text-sm text-gray-600">
+            <p className="mb-1">Use arrow keys or swipe to play</p>
+            <p className="text-xs">Merge tiles with same numbers to reach 2048!</p>
+          </div>
+        </div>
       </div>
     </div>
   );
