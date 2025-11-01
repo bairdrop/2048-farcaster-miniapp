@@ -25,7 +25,7 @@ interface AppConfig {
   frame: FrameConfig;
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://your-farcaster-app-url.vercel.app';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://2048-farcaster-miniapp-seven.vercel.app';
 
 export const config: { app: AppConfig } = {
   app: {
