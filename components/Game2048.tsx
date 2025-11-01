@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { RotateCcw, Trophy, Clock, Gamepad2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { RotateCcw, Trophy, Clock, Gamepad2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Zap } from 'lucide-react';
 import { sdk } from '@farcaster/frame-sdk';
 
 interface LeaderboardEntry {
@@ -23,7 +23,7 @@ declare global {
 }
 
 const Game2048 = () => {
-  const [currentScreen, setCurrentScreen] = useState<'home' | 'game' | 'leaderboard'>('home');
+  const [currentScreen, setCurrentScreen] = useState<'home' | 'game' | 'leaderboard-timed' | 'leaderboard-normal'>('home');
   const [gameMode, setGameMode] = useState<'normal' | 'timed'>('normal');
   const [timeLeft, setTimeLeft] = useState(30);
   const [grid, setGrid] = useState<number[][]>([]);
@@ -32,8 +32,10 @@ const Game2048 = () => {
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardTimed, setLeaderboardTimed] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardNormal, setLeaderboardNormal] = useState<LeaderboardEntry[]>([]);
   const [farcasterUser, setFarcasterUser] = useState<{ fid: number; username: string } | null>(null);
+  const [scoreSaved, setScoreSaved] = useState(false);
   const SIZE = 4;
 
   useEffect(() => {
@@ -58,15 +60,25 @@ const Game2048 = () => {
         console.log('Could not get Farcaster user info:', error);
       }
 
-      // Load leaderboard
+      // Load both leaderboards
       try {
-        const leaderboardResult = await window.storage?.get('leaderboard', true);
-        if (leaderboardResult) {
-          const data = JSON.parse(leaderboardResult.value);
-          setLeaderboard(data.sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score).slice(0, 10));
+        const timedResult = await window.storage?.get('leaderboard-timed', true);
+        if (timedResult) {
+          const data = JSON.parse(timedResult.value);
+          setLeaderboardTimed(data.sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score).slice(0, 10));
         }
       } catch (error) {
-        console.log('No leaderboard data yet');
+        console.log('No timed leaderboard data yet');
+      }
+
+      try {
+        const normalResult = await window.storage?.get('leaderboard-normal', true);
+        if (normalResult) {
+          const data = JSON.parse(normalResult.value);
+          setLeaderboardNormal(data.sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score).slice(0, 10));
+        }
+      } catch (error) {
+        console.log('No normal leaderboard data yet');
       }
     };
     
@@ -90,9 +102,17 @@ const Game2048 = () => {
     }
   }, [currentScreen, gameMode, gameOver, won, timeLeft]);
 
+  // Auto-save score when game ends
+  useEffect(() => {
+    if ((gameOver || won) && !scoreSaved && farcasterUser && score > 0) {
+      saveScoreToLeaderboard();
+    }
+  }, [gameOver, won, scoreSaved, farcasterUser, score]);
+
   const startGame = (mode: 'normal' | 'timed') => {
     setGameMode(mode);
     setTimeLeft(30);
+    setScoreSaved(false);
     initGame();
     setCurrentScreen('game');
   };
@@ -105,6 +125,7 @@ const Game2048 = () => {
     setScore(0);
     setGameOver(false);
     setWon(false);
+    setScoreSaved(false);
   };
 
   const addNewTile = (currentGrid: number[][]) => {
@@ -285,6 +306,64 @@ const Game2048 = () => {
     setGameOver(true);
   };
 
+  const saveScoreToLeaderboard = async () => {
+    if (!farcasterUser || scoreSaved) return;
+
+    const newEntry: LeaderboardEntry = {
+      username: farcasterUser.username,
+      fid: farcasterUser.fid,
+      score,
+      timestamp: Date.now()
+    };
+
+    const leaderboardKey = gameMode === 'timed' ? 'leaderboard-timed' : 'leaderboard-normal';
+    const currentLeaderboard = gameMode === 'timed' ? leaderboardTimed : leaderboardNormal;
+
+    // Check if user already has a score in leaderboard
+    const existingIndex = currentLeaderboard.findIndex(entry => entry.fid === farcasterUser.fid);
+    let updatedLeaderboard;
+
+    if (existingIndex !== -1) {
+      // Update existing score if new score is higher
+      if (score > currentLeaderboard[existingIndex].score) {
+        updatedLeaderboard = [...currentLeaderboard];
+        updatedLeaderboard[existingIndex] = newEntry;
+      } else {
+        updatedLeaderboard = [...currentLeaderboard];
+      }
+    } else {
+      // Add new entry
+      updatedLeaderboard = [...currentLeaderboard, newEntry];
+    }
+
+    // Sort and keep top 10
+    updatedLeaderboard = updatedLeaderboard
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+
+    try {
+      await window.storage?.set(leaderboardKey, JSON.stringify(updatedLeaderboard), true);
+      
+      if (gameMode === 'timed') {
+        setLeaderboardTimed(updatedLeaderboard);
+      } else {
+        setLeaderboardNormal(updatedLeaderboard);
+      }
+      
+      setScoreSaved(true);
+    } catch (error) {
+      console.error('Failed to save to leaderboard:', error);
+    }
+  };
+
+  const handleShareScore = () => {
+    const appUrl = window.location.origin;
+    const modeText = gameMode === 'timed' ? '30s mode' : 'normal mode';
+    const text = `🎮 I scored ${score} in 2048 Farcaster (${modeText})! Can you beat it?\n\n${appUrl}`;
+    const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
+    window.open(shareUrl, '_blank');
+  };
+
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
     if (gameOver || currentScreen !== 'game') return;
     
@@ -309,56 +388,6 @@ const Game2048 = () => {
       return () => window.removeEventListener('keydown', handleKeyPress);
     }
   }, [handleKeyPress, mounted]);
-
-  const handleShareScore = async () => {
-    if (!farcasterUser) {
-      alert('Please connect your Farcaster account first!');
-      return;
-    }
-
-    const newEntry: LeaderboardEntry = {
-      username: farcasterUser.username,
-      fid: farcasterUser.fid,
-      score,
-      timestamp: Date.now()
-    };
-
-    // Check if user already has a score in leaderboard
-    const existingIndex = leaderboard.findIndex(entry => entry.fid === farcasterUser.fid);
-    let updatedLeaderboard;
-
-    if (existingIndex !== -1) {
-      // Update existing score if new score is higher
-      if (score > leaderboard[existingIndex].score) {
-        updatedLeaderboard = [...leaderboard];
-        updatedLeaderboard[existingIndex] = newEntry;
-      } else {
-        updatedLeaderboard = [...leaderboard];
-      }
-    } else {
-      // Add new entry
-      updatedLeaderboard = [...leaderboard, newEntry];
-    }
-
-    // Sort and keep top 10
-    updatedLeaderboard = updatedLeaderboard
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
-
-    try {
-      await window.storage?.set('leaderboard', JSON.stringify(updatedLeaderboard), true);
-      setLeaderboard(updatedLeaderboard);
-      alert('Score saved to leaderboard!');
-    } catch (error) {
-      console.error('Failed to save to leaderboard:', error);
-      alert('Failed to save score. Please try again.');
-    }
-
-    const appUrl = window.location.origin;
-    const text = `🎮 I scored ${score} in 2048 Farcaster! Can you beat it?\n\n${appUrl}`;
-    const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
-    window.open(shareUrl, '_blank');
-  };
 
   const getTileColor = (value: number) => {
     const colors: {[key: number]: string} = {
@@ -426,13 +455,23 @@ const Game2048 = () => {
                 Play Normal Game
               </button>
               
-              <button
-                onClick={() => setCurrentScreen('leaderboard')}
-                className="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
-              >
-                <Trophy size={24} />
-                Leaderboard
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setCurrentScreen('leaderboard-timed')}
+                  className="bg-gradient-to-r from-orange-400 to-red-400 hover:from-orange-500 hover:to-red-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <Zap size={20} />
+                  Rank 30s
+                </button>
+                
+                <button
+                  onClick={() => setCurrentScreen('leaderboard-normal')}
+                  className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trophy size={20} />
+                  Rank Normal
+                </button>
+              </div>
             </div>
 
             <div className="text-center pb-4">
@@ -449,22 +488,27 @@ const Game2048 = () => {
     );
   }
 
-  if (currentScreen === 'leaderboard') {
+  if (currentScreen === 'leaderboard-timed' || currentScreen === 'leaderboard-normal') {
+    const isTimedMode = currentScreen === 'leaderboard-timed';
+    const currentLeaderboard = isTimedMode ? leaderboardTimed : leaderboardNormal;
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-2xl p-6">
             <div className="mb-6">
-              <h1 className="text-4xl font-bold text-indigo-600 flex items-center justify-center gap-2">
-                <Trophy size={36} /> Leaderboard
+              <h1 className="text-3xl font-bold text-indigo-600 flex items-center justify-center gap-2">
+                {isTimedMode ? <Zap size={32} /> : <Trophy size={32} />}
+                {isTimedMode ? '30s Mode' : 'Normal Mode'}
               </h1>
+              <p className="text-center text-gray-600 mt-2">Top 10 Players</p>
             </div>
             
             <div className="space-y-3 mb-6" style={{ minHeight: '400px' }}>
-              {leaderboard.length === 0 ? (
+              {currentLeaderboard.length === 0 ? (
                 <p className="text-gray-600 text-center py-8">No scores yet. Be the first!</p>
               ) : (
-                leaderboard.map((entry, index) => (
+                currentLeaderboard.map((entry, index) => (
                   <div
                     key={index}
                     className={`bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 flex items-center justify-between border-2 ${
@@ -558,18 +602,20 @@ const Game2048 = () => {
                   <div className="text-4xl font-bold text-white mb-4">
                     {won && !gameOver ? '🎉 You Won!' : gameOver ? '💀 Game Over' : '🎉 You Won!'}
                   </div>
-                  <div className="text-2xl text-white mb-4">
+                  <div className="text-2xl text-white mb-2">
                     Score: {score}
                   </div>
                   
                   {farcasterUser && (
                     <div className="mb-4 text-white">
-                      <p className="text-sm">Playing as</p>
-                      <p className="text-lg font-bold">@{farcasterUser.username}</p>
+                      <p className="text-sm opacity-80">@{farcasterUser.username}</p>
+                      {scoreSaved && (
+                        <p className="text-xs text-green-300 mt-1">✓ Score saved to leaderboard</p>
+                      )}
                     </div>
                   )}
                   
-                  <div className="flex gap-3 justify-center">
+                  <div className="flex gap-3 justify-center flex-wrap">
                     <button
                       onClick={initGame}
                       className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
@@ -577,10 +623,16 @@ const Game2048 = () => {
                       Play Again
                     </button>
                     <button
+                      onClick={() => setCurrentScreen(gameMode === 'timed' ? 'leaderboard-timed' : 'leaderboard-normal')}
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    >
+                      View Rank
+                    </button>
+                    <button
                       onClick={handleShareScore}
                       className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
                     >
-                      Save & Share
+                      Share
                     </button>
                   </div>
                 </div>
