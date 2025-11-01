@@ -394,7 +394,7 @@ const Game2048 = () => {
             {/* Top Half - Icon */}
             <div className="flex justify-center items-center mb-8 pt-8">
               <img 
-                src="https://2048-base-miniapp.vercel.app/icon.png" 
+                src="https://2048-farcaster-miniapp-seven.vercel.app/icon.png" 
                 alt="2048 Game Icon" 
                 className="w-[100px] h-[100px] rounded-2xl shadow-lg"
               />
@@ -496,7 +496,7 @@ const Game2048 = () => {
           <div className="text-center mb-6">
             <div className="flex justify-center mb-2">
               <img 
-                src="https://2048-base-miniapp.vercel.app/icon.png" 
+                src="https://2048-farcaster-miniapp-seven.vercel.app/icon.png" 
                 alt="2048 Game" 
                 className="w-16 h-16 rounded-lg"
               />
