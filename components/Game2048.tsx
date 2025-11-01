@@ -351,7 +351,7 @@ const Game2048 = () => {
     }
 
     const appUrl = window.location.origin;
-    const text = `🎮 I scored ${score} in 2048! Can you beat it?\n\n${appUrl}`;
+    const text = `🎮 I scored ${score} in 2048 Farcaster! Can you beat it?\n\n${appUrl}`;
     const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
     window.open(shareUrl, '_blank');
   };
