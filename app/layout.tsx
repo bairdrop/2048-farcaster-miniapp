@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "2048 Farcaster",
     description: "Play the classic 2048 puzzle game on Farcaster",
-    images: [`${appUrl}/screenshot1.png`],
+    images: [`${appUrl}/screenshot1.png`], // Fixed: Added opening bracket
   },
   other: {
     'fc:frame': JSON.stringify({
