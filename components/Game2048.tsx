@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { RotateCcw, Trophy, Clock, Gamepad2 } from 'lucide-react';
+import { RotateCcw, Trophy, Clock, Gamepad2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface LeaderboardEntry {
   username: string;
@@ -32,7 +32,6 @@ const Game2048 = () => {
   const [mounted, setMounted] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [username, setUsername] = useState('');
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const SIZE = 4;
 
   useEffect(() => {
@@ -294,33 +293,6 @@ const Game2048 = () => {
     }
   }, [handleKeyPress, mounted]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart({
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY
-    });
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart || gameOver) return;
-
-    const deltaX = e.changedTouches[0].clientX - touchStart.x;
-    const deltaY = e.changedTouches[0].clientY - touchStart.y;
-    const minSwipeDistance = 50;
-
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      if (Math.abs(deltaX) > minSwipeDistance) {
-        deltaX > 0 ? moveRight() : moveLeft();
-      }
-    } else {
-      if (Math.abs(deltaY) > minSwipeDistance) {
-        deltaY > 0 ? moveDown() : moveUp();
-      }
-    }
-
-    setTouchStart(null);
-  };
-
   const handleShareScore = async () => {
     if (!username.trim()) {
       alert('Please enter a username first!');
@@ -421,7 +393,7 @@ const Game2048 = () => {
             <div className="text-center pb-4">
               <h2 className="text-2xl font-bold text-indigo-600 mb-4">How to Play</h2>
               <div className="text-gray-600 space-y-2">
-                <p className="text-sm">Use arrow keys on desktop or swipe on mobile to move tiles.</p>
+                <p className="text-sm">Use arrow buttons below the board to move tiles.</p>
                 <p className="text-sm">When two tiles with the same number touch, they merge into one!</p>
                 <p className="text-sm font-semibold">Goal: Reach the 2048 tile to win!</p>
               </div>
@@ -519,11 +491,7 @@ const Game2048 = () => {
             </button>
           </div>
 
-          <div 
-            className="bg-gray-800 rounded-xl p-3 mb-6 relative"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
+          <div className="bg-gray-800 rounded-xl p-3 mb-6 relative">
             <div className="grid grid-cols-4 gap-3">
               {grid.map((row, i) =>
                 row.map((cell, j) => (
@@ -575,8 +543,44 @@ const Game2048 = () => {
             )}
           </div>
 
+          {/* Arrow Controls */}
+          <div className="mb-4">
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={moveUp}
+                disabled={gameOver}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg p-4 transition-colors active:scale-95"
+              >
+                <ArrowUp size={28} />
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={moveLeft}
+                  disabled={gameOver}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg p-4 transition-colors active:scale-95"
+                >
+                  <ArrowLeft size={28} />
+                </button>
+                <button
+                  onClick={moveDown}
+                  disabled={gameOver}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg p-4 transition-colors active:scale-95"
+                >
+                  <ArrowDown size={28} />
+                </button>
+                <button
+                  onClick={moveRight}
+                  disabled={gameOver}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg p-4 transition-colors active:scale-95"
+                >
+                  <ArrowRight size={28} />
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="text-center text-sm text-gray-600">
-            <p className="mb-1">Use arrow keys or swipe to play</p>
+            <p className="mb-1">Use arrow buttons to play</p>
             <p className="text-xs">Merge tiles with same numbers to reach 2048!</p>
           </div>
         </div>
