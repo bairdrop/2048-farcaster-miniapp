@@ -1,19 +1,45 @@
-'use client';
-
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl p-6">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-indigo-600 mb-4">2048 Farcaster</h1>
-            <p className="text-gray-600 mb-6">The classic puzzle game</p>
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg p-8">
-              <p className="text-xl font-bold">Game Loading...</p>
-            </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      background: 'linear-gradient(to bottom right, #dbeafe, #e0e7ff)',
+      padding: '1rem'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '1rem',
+        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+        padding: '2rem',
+        maxWidth: '28rem',
+        width: '100%'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ 
+            fontSize: '2.25rem', 
+            fontWeight: 'bold', 
+            color: '#4f46e5',
+            marginBottom: '1rem'
+          }}>
+            2048 Farcaster
+          </h1>
+          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+            The classic puzzle game
+          </p>
+          <div style={{
+            background: 'linear-gradient(to right, #6366f1, #a855f7)',
+            color: 'white',
+            borderRadius: '0.5rem',
+            padding: '2rem'
+          }}>
+            <p style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
+              App is Working! ✓
+            </p>
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
