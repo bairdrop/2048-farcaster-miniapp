@@ -30,10 +30,10 @@ export async function GET() {
       ogDescription: "The best 2048 Farcaster game",
       ogImageUrl: "https://2048-farcaster-miniapp-seven.vercel.app/screenshot1.png"
     },
-    accountAssociation: {
-      header: "",
-      payload: "",
-      signature: ""
+     "accountAssociation": {
+    "header": "eyJmaWQiOjUyNjk5NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDQ4YURERTk1ZkY1OGNjQzRBRTkxYjM3YzY4NkVmQTA3OTFhMDUxMDcifQ",
+    "payload": "eyJkb21haW4iOiIyMDQ4LWZhcmNhc3Rlci1taW5pYXBwLXNldmVuLnZlcmNlbC5hcHAifQ",
+    "signature": "bcHOtpx1oXPhPw0FnUf1dib3CSE3TUbaZV8zC9zo2JNTjjlfDELagtBRvFG9hDsK/huus/1HIL3Bii7o6CWueRw="
     }
   };
 
