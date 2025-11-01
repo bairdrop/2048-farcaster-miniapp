@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://2048-base-miniapp.vercel.app';
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-farcaster-app-url.vercel.app';
 
 export const metadata: Metadata = {
-  title: "2048 Base Game",
-  description: "Play the classic 2048 puzzle game on Base",
+  title: "2048 Farcaster",
+  description: "Play the classic 2048 puzzle game on Farcaster",
   openGraph: {
-    title: "2048 Base Game",
-    description: "Play the classic 2048 puzzle game on Base",
+    title: "2048 Farcaster",
+    description: "Play the classic 2048 puzzle game on Farcaster",
     images: [`${appUrl}/screenshot1.png`],
   },
   other: {
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
         title: 'Play 2048',
         action: {
           type: 'launch_frame',
-          name: '2048 Base Game',
+          name: '2048 Farcaster',
           url: appUrl,
           splashImageUrl: `${appUrl}/splash.png`,
           splashBackgroundColor: '#8F7A66'
