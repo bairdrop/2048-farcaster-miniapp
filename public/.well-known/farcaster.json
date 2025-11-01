@@ -1,4 +1,40 @@
 {
+  "frame": {
+    "name": "2048 Farcaster",
+    "version": "1",
+    "iconUrl": "https://2048-farcaster-miniapp-seven.vercel.app/icon.png",
+    "homeUrl": "https://2048-farcaster-miniapp-seven.vercel.app",
+    "imageUrl": "https://2048-farcaster-miniapp-seven.vercel.app/image.png",
+    "buttonTitle": "START",
+    "splashImageUrl": "https://2048-farcaster-miniapp-seven.vercel.app/splash.png",
+    "splashBackgroundColor": "#FF8C32",
+    "webhookUrl": "https://2048-farcaster-miniapp-seven.vercel.app/api/webhook",
+    "subtitle": "The best 2048 Farcaster game",
+    "description": "2048 is an addictive puzzle game where you slide and merge tiles to reach the 2048 tile. Simple to play, hard to stop.",
+    "screenshotUrls": [
+      "https://2048-farcaster-miniapp-seven.vercel.app/screenshots1.png"
+    ],
+    "primaryCategory": "games",
+    "tags": [
+      "2048",
+      "game",
+      "farcaster",
+      "2048game",
+      "base"
+    ],
+    "tagline": "The best 2048 Farcaster game",
+    "ogTitle": "The best 2048 Farcaster game",
+    "ogDescription": "The best 2048 Farcaster game",
+    "ogImageUrl": "https://2048-farcaster-miniapp-seven.vercel.app/screenshots1.png"
+  },
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  }
+}
+
+{
   "accountAssociation": {
     "header": "eyJmaWQiOjUyNjk5NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDQ4YURERTk1ZkY1OGNjQzRBRTkxYjM3YzY4NkVmQTA3OTFhMDUxMDcifQ",
     "payload": "eyJkb21haW4iOiIyMDQ4LWZhcmNhc3Rlci1taW5pYXBwLXNldmVuLnZlcmNlbC5hcHAifQ",
