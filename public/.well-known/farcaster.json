@@ -27,13 +27,6 @@
     "ogDescription": "The best 2048 Farcaster game",
     "ogImageUrl": "https://2048-farcaster-miniapp-seven.vercel.app/screenshots1.png"
   },
-  "accountAssociation": {
-    "header": "",
-    "payload": "",
-    "signature": ""
-  }
-}
-
 {
   "accountAssociation": {
     "header": "eyJmaWQiOjUyNjk5NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDQ4YURERTk1ZkY1OGNjQzRBRTkxYjM3YzY4NkVmQTA3OTFhMDUxMDcifQ",
