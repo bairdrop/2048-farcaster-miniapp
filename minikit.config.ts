@@ -1,11 +1,11 @@
-// Base Mini App Configuration
+// Farcaster Frame Configuration
 interface AccountAssociation {
   header?: string;
   payload?: string;
   signature?: string;
 }
 
-interface MiniAppConfig {
+interface FrameConfig {
   name: string;
   subtitle?: string;
   description?: string;
@@ -22,16 +22,16 @@ interface MiniAppConfig {
 }
 
 interface AppConfig {
-  miniapp: MiniAppConfig;
+  frame: FrameConfig;
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://2048-base-miniapp.vercel.app';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://your-farcaster-app-url.vercel.app';
 
 export const config: { app: AppConfig } = {
   app: {
-    miniapp: {
-      name: '2048 Merge Master',
-      subtitle: 'Classic puzzle game on Base',
+    frame: {
+      name: '2048 Farcaster',
+      subtitle: 'Classic puzzle game on Farcaster',
       description: 'Join the numbers to reach 2048! A classic sliding puzzle game where you combine tiles with the same numbers. Swipe to move tiles and merge them together. Can you reach 2048?',
       version: '1.0.0',
       url: APP_URL,
@@ -46,9 +46,9 @@ export const config: { app: AppConfig } = {
       primaryCategory: 'games',
       tags: ['puzzle', 'casual', 'strategy', 'numbers'],
       accountAssociation: {
-        header: "eyJmaWQiOjUyNjk5NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDQ4YURERTk1ZkY1OGNjQzRBRTkxYjM3YzY4NkVmQTA3OTFhMDUxMDcifQ",
-        payload: "eyJkb21haW4iOiIyMDQ4LWJhc2UtbWluaWFwcC52ZXJjZWwuYXBwIn0",
-        signature: "VzGlpSDK1Iki14JAH/xGUJ8QNGm14offv0SPHuN2FhtVSqvt/Wre3VxF5QsjYDat4v7fynIKp/S4nLhYqMHwwRs="
+        header: "YOUR_NEW_HEADER_HERE",
+        payload: "YOUR_NEW_PAYLOAD_HERE",
+        signature: "YOUR_NEW_SIGNATURE_HERE"
       }
     }
   }
