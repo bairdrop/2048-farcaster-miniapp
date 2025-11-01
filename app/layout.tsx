@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "2048 Farcaster",
     description: "Play the classic 2048 puzzle game on Farcaster",
-    images: [`${appUrl}/screenshot1.png`], // Fixed: Added opening bracket
+    images: [`${appUrl}/screenshot1.png`],
   },
   other: {
     'fc:frame': JSON.stringify({
@@ -36,7 +36,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
