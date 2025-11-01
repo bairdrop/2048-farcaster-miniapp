@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-farcaster-app-url.vercel.app';
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://2048-farcaster-miniapp-seven.vercel.app';
 
 export const metadata: Metadata = {
   title: "2048 Farcaster",
